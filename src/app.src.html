@@ -1,0 +1,928 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Xuất Phiếu Nhận Xét</title>
+<style>
+/* Bố cục: thanh trên + 2 cột (cài đặt phiếu | dữ liệu & xem trước), xếp 1 cột trên màn hình hẹp */
+:root{
+  --bg:#f7f5f3; --panel:#ffffff; --ink:#24201d; --muted:#6f6760; --line:#e4ddd6;
+  --accent:#e2621b; --accent-ink:#ffffff; --accent-soft:#fdeee4;
+  --ok:#2f7d4f; --warn:#b26a00; --warn-soft:#fff4e0; --bad:#b3261e;
+  --font:"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono",Consolas,monospace;
+  --r:8px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#1b1917; --panel:#252220; --ink:#efe9e4; --muted:#a89f97; --line:#3a3532;
+  --accent:#f07a36; --accent-ink:#1b1917; --accent-soft:#3a2a20; --warn-soft:#3a2e1a; --warn:#e3a24a; --ok:#6cc08f; --bad:#ef8a80;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#1b1917; --panel:#252220; --ink:#efe9e4; --muted:#a89f97; --line:#3a3532;
+  --accent:#f07a36; --accent-ink:#1b1917; --accent-soft:#3a2a20; --warn-soft:#3a2e1a; --warn:#e3a24a; --ok:#6cc08f; --bad:#ef8a80;
+  color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--font)}
+header.top{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:var(--panel);border-bottom:1px solid var(--line)}
+header.top h1{font-size:17px;margin:0;letter-spacing:.2px}
+header.top h1 span{color:var(--accent)}
+header.top .sp{flex:1}
+main{display:grid;grid-template-columns:minmax(330px,430px) minmax(0,1fr);gap:16px;padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));align-items:start}
+@media (max-width:900px){main{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:12px;min-width:0}
+details.card,section.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+details.card>summary{cursor:pointer;padding:11px 14px;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+details.card[open]>summary::before{transform:rotate(90deg)}
+details.card>summary .hint{font-weight:400;color:var(--muted);font-size:12px;margin-left:auto}
+.body{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+section.card{padding:14px;display:flex;flex-direction:column;gap:10px}
+section.card h2{font-size:15px;margin:0}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+input[type=text],input[type=number],textarea,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:60px;line-height:1.4}
+textarea.mono{font-family:var(--mono);font-size:12px}
+input:focus-visible,textarea:focus-visible,select:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>*{min-width:0}
+.grow{flex:1}
+button{font:inherit;cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+button.primary:disabled{opacity:.5;cursor:not-allowed}
+button.sm{padding:3px 8px;font-size:12px}
+button.icon{padding:2px 7px;font-size:13px;line-height:1.2}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg label{flex:1;text-align:center;padding:6px 4px;cursor:pointer;font-weight:600;font-size:13px;border-right:1px solid var(--line);min-width:60px}
+.seg label:last-child{border-right:0}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink)}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-2px}
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:grid;gap:6px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:6px 8px;background:var(--bg)}
+.item.subj{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr)}
+.item.subj .sfx{grid-column:2 / -1}
+.item.subj .fn{grid-column:2 / -1;font-size:12px}
+.item.crit{grid-template-columns:auto minmax(0,1fr) auto}
+.item.off{opacity:.6}
+.tiny{font-size:11.5px;color:var(--muted)}
+.tokens{display:flex;flex-wrap:wrap;gap:4px}
+.tokens button{font-family:var(--mono);font-size:11.5px;padding:2px 6px;background:var(--accent-soft);border-color:transparent}
+.example{font-size:13px;background:var(--accent-soft);padding:6px 8px;border-radius:6px;word-break:break-all}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:18px;text-align:center;color:var(--muted);cursor:pointer;transition:border-color .15s,background .15s}
+.drop.over,.drop:hover{border-color:var(--accent);background:var(--accent-soft)}
+.drop strong{color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:999px;padding:3px 10px 3px 6px;font-size:12.5px;cursor:pointer;background:var(--bg);font-variant-numeric:tabular-nums}
+.chip:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.chip .n{color:var(--muted)}
+.chip .w{color:var(--warn);font-weight:700}
+.stats{display:flex;gap:18px;flex-wrap:wrap;font-variant-numeric:tabular-nums}
+.stats div{display:flex;flex-direction:column}
+.stats b{font-size:20px}
+.stats span{font-size:12px;color:var(--muted)}
+.tablewrap{overflow:auto;max-height:340px;border:1px solid var(--line);border-radius:6px}
+table.st{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}
+table.st th{position:sticky;top:0;background:var(--panel);text-align:left;font-weight:600;color:var(--muted);font-size:12px;border-bottom:1px solid var(--line);padding:6px 8px;white-space:nowrap}
+table.st td{padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+table.st tr{cursor:pointer}
+table.st tr:hover td{background:var(--accent-soft)}
+table.st tr.sel td{background:var(--accent-soft);box-shadow:inset 0 0 0 0 var(--accent)}
+table.st tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+.pill{display:inline-block;font-size:11px;border-radius:999px;padding:1px 7px;margin:1px 2px 1px 0;background:var(--bg);border:1px solid var(--line);white-space:nowrap}
+.pill.warn{background:var(--warn-soft);border-color:transparent;color:var(--warn);font-weight:600}
+.fname{font-size:12px;color:var(--muted);word-break:break-all}
+.preview{width:100%;height:78vh;min-height:480px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.warnbox{background:var(--warn-soft);border-radius:6px;padding:8px 10px;font-size:12.5px;max-height:180px;overflow:auto}
+.warnbox ul{margin:4px 0 0;padding-left:18px}
+.progress{height:8px;background:var(--line);border-radius:999px;overflow:hidden}
+.progress i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.msg{font-size:13px}
+.msg.ok{color:var(--ok)} .msg.bad{color:var(--bad)}
+.exportbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.colhead{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 8px;align-items:center}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Xuất <span>Phiếu Nhận Xét</span> · Tiểu học</h1>
+  <div class="sp"></div>
+  <button id="btnSaveTpl" type="button" title="Lưu toàn bộ cài đặt phiếu thành file .json">Lưu mẫu</button>
+  <button id="btnLoadTpl" type="button" title="Mở file mẫu .json đã lưu">Mở mẫu</button>
+  <button id="btnReset" type="button">Mặc định</button>
+  <input id="tplFile" type="file" accept=".json,application/json" hidden>
+</header>
+
+<main>
+  <!-- CỘT TRÁI: CÀI ĐẶT PHIẾU -->
+  <div class="col" id="settings">
+    <details class="card" open>
+      <summary>Thời điểm &amp; tiêu đề</summary>
+      <div class="body">
+        <div class="seg" id="periodSeg" role="radiogroup" aria-label="Thời điểm"></div>
+        <label class="f">Năm học<input id="namHoc" type="text" data-bind="namHoc"></label>
+        <label class="f">Tiêu đề phiếu (mỗi dòng một dòng tiêu đề)<textarea id="tieuDe" data-bind="tieuDe" rows="2"></textarea></label>
+        <label class="f">Lời chào<input id="kinhGui" type="text" data-bind="kinhGui"></label>
+        <label class="f">Lời gửi phụ huynh<textarea id="loiGui" data-bind="loiGui" rows="4"></textarea></label>
+        <div class="tiny">Biến dùng được: <code>{THOI_DIEM}</code> (viết hoa), <code>{thoi_diem}</code>, <code>{NAM_HOC}</code>, <code>{MON}</code> (các môn có trong phiếu của học sinh đó)</div>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>Môn học <span class="hint">chọn 1, 2, 3 hoặc cả 4 môn</span></summary>
+      <div class="body">
+        <div class="list" id="subjList"></div>
+        <button type="button" class="sm" id="addSubj">+ Thêm môn khác</button>
+        <div class="tiny">"Hậu tố cột" là phần đuôi tên cột trong Excel để nhận ra môn, ví dụ cột <code>Nhận xétTin</code> có hậu tố <code>Tin</code>. Môn nào học sinh không có dữ liệu sẽ tự bỏ khỏi phiếu.</div>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>Cột &amp; tiêu chí trong bảng</summary>
+      <div class="body">
+        <div class="colhead" id="colList"></div>
+        <div class="tiny" style="margin-top:4px">Các dòng tiêu chí (kéo thứ tự bằng ↑ ↓):</div>
+        <div class="list" id="critList"></div>
+        <div class="row">
+          <input id="newCritLabel" type="text" class="grow" placeholder="Tên tiêu chí in trên phiếu">
+          <input id="newCritCol" type="text" class="grow" placeholder="Tên cột Excel (bỏ hậu tố)">
+          <button type="button" class="sm" id="addCrit">+ Thêm</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="hideEmpty" data-bind="hideEmpty"> Ẩn dòng tiêu chí khi ô trống (ví dụ không có điểm)</label>
+        <label class="chk"><input type="checkbox" id="newPage" data-bind="newPagePerSubject"> Mỗi môn sang trang mới, có dòng tiêu đề cột riêng</label>
+        <label class="chk"><input type="checkbox" id="headFill" data-bind="headerFill"> Tô nền dòng tiêu đề cột</label>
+        <label class="chk"><input type="checkbox" id="titleCase" data-bind="titleCaseNames"> Sửa tên viết HOA toàn bộ thành Hoa Đầu Từ</label>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary>Phụ lục &amp; chữ ký</summary>
+      <div class="body">
+        <label class="chk"><input type="checkbox" id="appOn" data-bind="appendixOn"> In phần tiêu chí &amp; thang đánh giá cuối phiếu</label>
+        <label class="chk"><input type="checkbox" id="appNewPage" data-bind="appendixNewPage"> Phụ lục sang trang mới</label>
+        <label class="f">Nội dung phụ lục<textarea id="appendix" class="mono" data-bind="appendix" rows="12"></textarea></label>
+        <div class="tiny">Dòng bắt đầu bằng <code>## </code> là tiêu đề in đậm, <code>1. </code> là mục in đậm có số, <code>o </code> là gạch đầu dòng thụt vào.</div>
+        <label class="f">Chữ ký (căn phải, in nghiêng đậm)<textarea id="kyTen" data-bind="kyTen" rows="2"></textarea></label>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>Tên file PDF</summary>
+      <div class="body">
+        <label class="f">Mẫu tên file<input id="fileName" type="text" data-bind="fileName"></label>
+        <div class="tokens" id="tokens"></div>
+        <div class="row">
+          <label class="f grow">Nối các môn bằng<select id="monSep" data-bind="monSep">
+            <option value=" ">dấu cách: STEM Tin học</option>
+            <option value="_">gạch dưới: STEM_Tin học</option>
+            <option value="-">gạch ngang: STEM-Tin học</option>
+            <option value=", ">dấu phẩy: STEM, Tin học</option>
+          </select></label>
+        </div>
+        <label class="chk"><input type="checkbox" id="boDau" data-bind="boDau"> Bỏ dấu tiếng Việt trong tên file</label>
+        <label class="chk"><input type="checkbox" id="zipByClass" data-bind="zipByClass"> Mỗi lớp một thư mục trong file ZIP</label>
+        <label class="f">Xuất ra<select id="outMode" data-bind="outMode">
+          <option value="each">Mỗi học sinh 1 file PDF</option>
+          <option value="class">Mỗi lớp 1 file PDF gộp (để in)</option>
+          <option value="both">Cả hai</option>
+        </select></label>
+        <div class="tiny">Ví dụ:</div>
+        <div class="example" id="fnExample"></div>
+      </div>
+    </details>
+  </div>
+
+  <!-- CỘT PHẢI: DỮ LIỆU + XEM TRƯỚC -->
+  <div class="col">
+    <section class="card">
+      <h2>1. Tải file Excel nhận xét</h2>
+      <label class="drop" id="drop" for="xlsFile">
+        <strong>Kéo thả file Excel vào đây</strong> hoặc bấm để chọn file (.xlsx). Mỗi sheet là một lớp, mỗi dòng là một học sinh.
+      </label>
+      <input id="xlsFile" type="file" accept=".xlsx,.xls,.xlsm" hidden>
+      <div id="dataInfo" class="msg"></div>
+      <div class="stats" id="stats" hidden></div>
+      <div id="classBox" hidden>
+        <div class="row" style="margin-bottom:6px"><b class="grow">Chọn lớp để xuất</b>
+          <button type="button" class="sm" id="selAll">Chọn tất cả</button><button type="button" class="sm" id="selNone">Bỏ chọn</button></div>
+        <div class="chips" id="classChips"></div>
+      </div>
+      <div class="warnbox" id="warnBox" hidden></div>
+    </section>
+
+    <section class="card">
+      <div class="row"><h2 class="grow">2. Danh sách học sinh</h2>
+        <input id="search" type="text" placeholder="Tìm tên…" style="max-width:200px"></div>
+      <div class="tablewrap"><table class="st"><thead><tr><th>Lớp</th><th>Họ và tên</th><th>Môn trong phiếu</th><th>Tên file</th></tr></thead><tbody id="stBody"></tbody></table></div>
+      <div class="tiny">Bấm vào một học sinh để xem trước phiếu.</div>
+    </section>
+
+    <section class="card">
+      <div class="row"><h2 class="grow">3. Xem trước &amp; xuất</h2>
+        <button type="button" id="dlOne">Tải PDF học sinh này</button></div>
+      <div class="exportbar">
+        <button type="button" class="primary" id="btnExport">Xuất PDF</button>
+        <div class="grow" style="min-width:160px"><div class="progress"><i id="prog"></i></div></div>
+        <span class="msg" id="expMsg"></span>
+      </div>
+      <iframe class="preview" id="preview" title="Xem trước phiếu nhận xét"></iframe>
+    </section>
+  </div>
+</main>
+
+<!--LIBS-->
+<script>
+"use strict";
+/* ================= TIỆN ÍCH ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const stripMarks = s => String(s ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+const norm = s => stripMarks(s).toLowerCase().replace(/[^a-z0-9]/g, "");
+const clean = v => v == null ? "" : String(v).normalize("NFC").replace(/\r/g, "").replace(/[ \t]+\n/g, "\n").trim();
+const fill = (t, ctx) => String(t ?? "").replace(/\{(\w+)\}/g, (m, k) => ctx[k] !== undefined ? ctx[k] : m);
+const tick = () => new Promise(r => setTimeout(r, 0));
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch(e){ return null; } },
+  set(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+};
+function download(blob, name){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+}
+
+/* ================= CẤU HÌNH MẶC ĐỊNH ================= */
+const PERIODS = {
+  GHKI:  { code:"GHKI",  text:"giữa học kỳ I" },
+  HKI:   { code:"HKI",   text:"học kỳ I" },
+  GHKII: { code:"GHKII", text:"giữa học kỳ II" },
+  HKII:  { code:"HKII",  text:"học kỳ II" }
+};
+const BASE_CRIT = ["tinhthan","tiepthu","hoptac","sangtao","ketqua"];
+const DEFAULT_APPENDIX = `## *Tiêu chí đánh giá:
+1. Tinh thần học tập:
+o Tham gia học tập tích cực, chăm chỉ, tự giác.
+o Chú ý nghe giảng và làm bài tập đầy đủ.
+o Hỏi bài và tìm hiểu kiến thức mới ngoài nội dung trên lớp.
+2. Khả năng tiếp thu kiến thức mới:
+o Hiểu và nắm bắt nhanh nội dung bài học.
+o Áp dụng kiến thức đã học vào thực tế.
+o Biết đặt câu hỏi hoặc tìm tòi các giải pháp sáng tạo.
+3. Thái độ hợp tác khi làm việc nhóm:
+o Hợp tác tốt với bạn bè, sẵn sàng hỗ trợ.
+o Đóng góp ý kiến tích cực vào hoạt động chung.
+o Chia sẻ trách nhiệm và tuân thủ quy định nhóm.
+4. Khả năng sáng tạo trong các hoạt động:
+o Đề xuất ý tưởng mới trong học tập và dự án.
+o Phát triển những sản phẩm hoặc giải pháp sáng tạo.
+o Tự tin thể hiện các sản phẩm hoặc giải pháp của mình.
+5. Kết quả học tập:
+o Hoàn thành đầy đủ các bài tập và dự án được giao.
+o Đạt kết quả cao trong bài kiểm tra, bài thực hành.
+o Có tiến bộ rõ rệt qua từng giai đoạn học tập.
+
+## *Thang đánh giá:
+- Tốt (T): Học sinh hoàn thành vượt yêu cầu, tích cực và sáng tạo.
+- Hoàn thành (H): Học sinh đáp ứng đầy đủ yêu cầu bài học.
+- Chưa hoàn thành (K): Cần nỗ lực thêm để đạt yêu cầu.`;
+
+function defaultCfg(){
+  return {
+    v: 1,
+    period: "GHKI",
+    namHoc: "2026-2027",
+    tieuDe: "PHIẾU NHẬN XÉT {THOI_DIEM}\nNĂM HỌC {NAM_HOC}",
+    kinhGui: "Kính gửi: Quý phụ huynh,",
+    loiGui: "Bộ môn STEM & Công nghệ - Trường Tiểu học và THCS FPT Cầu Giấy xin gửi đến Quý phụ huynh phiếu nhận xét học sinh cho các môn học {MON} {thoi_diem} năm học {NAM_HOC}.",
+    subjects: [
+      { id:"STEM",  on:true, inName:true, ten:"STEM",                tenFile:"STEM",     suffix:"S, STEM" },
+      { id:"TIN",   on:true, inName:true, ten:"Tin học - Công nghệ", tenFile:"Tin học",  suffix:"Tin, Tin học" },
+      { id:"CN",    on:true, inName:true, ten:"Công nghệ",           tenFile:"CN",       suffix:"CN, Công nghệ" },
+      { id:"ROBOT", on:true, inName:true, ten:"Robotics",            tenFile:"Robotics", suffix:"Robot, Robotics" }
+    ],
+    columns: {
+      noidung:  { on:true, label:"Nội dung" },
+      tieuchi:  { on:true, label:"Các tiêu chí đánh giá" },
+      mucchung: { on:true, label:"Mức đánh giá chung" },
+      nhanxet:  { on:true, label:"Nhận xét" }
+    },
+    criteria: [
+      { key:"diem",     on:true, label:"Điểm dự án {thoi_diem}" },
+      { key:"tinhthan", on:true, label:"Tinh thần học tập" },
+      { key:"tiepthu",  on:true, label:"Khả năng tiếp thu kiến thức mới" },
+      { key:"hoptac",   on:true, label:"Thái độ hợp tác khi làm việc nhóm" },
+      { key:"sangtao",  on:true, label:"Khả năng sáng tạo trong các hoạt động" },
+      { key:"ketqua",   on:true, label:"Kết quả học tập" }
+    ],
+    hideEmpty: true,
+    newPagePerSubject: true,
+    headerFill: false,
+    titleCaseNames: true,
+    appendixOn: true,
+    appendixNewPage: false,
+    appendix: DEFAULT_APPENDIX,
+    kyTen: "Tổ STEM-Công nghệ\nTrường Tiểu học & THCS FPT Cầu Giấy",
+    fileName: "{HoTen}_{ThoiDiem}_{Mon}",
+    monSep: " ",
+    boDau: false,
+    zipByClass: true,
+    outMode: "each"
+  };
+}
+function mergeCfg(saved){
+  const d = defaultCfg();
+  if (!saved || typeof saved !== "object") return d;
+  const c = Object.assign(d, saved);
+  c.columns = Object.assign(defaultCfg().columns, saved.columns || {});
+  if (!Array.isArray(c.subjects) || !c.subjects.length) c.subjects = defaultCfg().subjects;
+  if (!Array.isArray(c.criteria)) c.criteria = defaultCfg().criteria;
+  if (!PERIODS[c.period]) c.period = "GHKI";
+  return c;
+}
+let cfg = mergeCfg(store.get("pnx-cfg-v1"));
+
+/* ================= ĐỌC EXCEL ================= */
+const FIELD_PREFIX = [
+  ["noidung",  ["noidunghoc","noidung"]],
+  ["tinhthan", ["tinhthanhoctap","tinhthan"]],
+  ["tiepthu",  ["khanangtiepthukienthucmoi","khanangtiepthu","tiepthukienthuc","tiepthu"]],
+  ["hoptac",   ["thaidohoptackhilamviecnhom","thaidohoptac","hoptac"]],
+  ["sangtao",  ["khanangsangtaotrongcachoatdong","khanangsangtao","sangtao"]],
+  ["ketqua",   ["ketquahoctap","ketqua"]],
+  ["mucchung", ["mucdanhgiachung","mucdanhgia","danhgiachung"]],
+  ["nhanxet",  ["nhanxet"]],
+  ["diem",     ["diemduan","diem"]]
+];
+const BASE_COLS = { hovaten:"hoten", hoten:"hoten", hotenhocsinh:"hoten", lop:"lop", stt:"stt", mahs:"mahs", mahocsinh:"mahs", tenfile:"skip" };
+
+function prefixTable(){
+  const t = [];
+  FIELD_PREFIX.forEach(([k, ps]) => ps.forEach(p => t.push([p, k])));
+  cfg.criteria.filter(c => c.custom && c.excel).forEach(c => { const p = norm(c.excel); if (p) t.push([p, c.key]); });
+  return t.sort((a, b) => b[0].length - a[0].length);
+}
+function subjectBySuffix(suf){
+  for (const s of cfg.subjects){
+    const list = String(s.suffix || "").split(",").map(norm).filter(Boolean);
+    if (list.includes(suf)) return s.id;
+  }
+  return null;
+}
+function matchHeader(h, pt){
+  const n = norm(h);
+  if (!n) return null;
+  if (BASE_COLS[n]) return { base: BASE_COLS[n] };
+  for (const [p, k] of pt){
+    if (n.startsWith(p)){
+      const sid = subjectBySuffix(n.slice(p.length));
+      if (sid) return { subj: sid, field: k };
+    }
+  }
+  return null;
+}
+
+let workbookRows = null;   // [{name, rows}]
+let sourceName = "";
+let students = [];         // tất cả học sinh
+let sheetsInfo = [];       // [{name, count, subjects:Set, unknown:[], error}]
+let selectedClasses = new Set();
+let current = null;        // học sinh đang xem trước
+
+function toTitle(name){
+  if (!cfg.titleCaseNames) return name;
+  const letters = name.replace(/[^\p{L}]/gu, "");
+  if (!letters || letters !== letters.toLocaleUpperCase("vi")) return name;
+  return name.toLocaleLowerCase("vi").replace(/(^|\s)(\p{L})/gu, (m, a, b) => a + b.toLocaleUpperCase("vi"));
+}
+
+function parseAll(){
+  students = []; sheetsInfo = [];
+  if (!workbookRows) return;
+  const pt = prefixTable();
+  for (const { name, rows } of workbookRows){
+    const info = { name, count:0, subjects:new Set(), unknown:[], error:"" };
+    sheetsInfo.push(info);
+    const hi = rows.findIndex((r, i) => i < 15 && r && r.some(c => ["hovaten","hoten","hotenhocsinh"].includes(norm(c))));
+    if (hi < 0){ info.error = "không thấy cột “Họ và tên”"; continue; }
+    const header = rows[hi], data = rows.slice(hi + 1);
+    const maps = [];
+    header.forEach((h, ci) => {
+      const m = matchHeader(h, pt);
+      if (m) maps[ci] = m;
+      else if (norm(h)) info.unknown.push(String(h).trim());
+    });
+    // Cột Mã HS không có tiêu đề (vd FCG10617)
+    const width = Math.max(header.length, ...data.slice(0, 5).map(r => (r || []).length));
+    for (let ci = 0; ci < width; ci++){
+      if (maps[ci] || norm(header[ci])) continue;
+      const vals = data.map(r => r && r[ci]).filter(v => v != null && String(v).trim() !== "");
+      if (vals.length && vals.every(v => /^[A-Za-z]{2,}\d{3,}$/.test(String(v).trim()))) maps[ci] = { base:"mahs" };
+    }
+    let idx = 0;
+    for (const r of data){
+      if (!r) continue;
+      const st = { sheet:name, stt:"", lop:"", mahs:"", rawName:"", subj:{} };
+      maps.forEach((m, ci) => {
+        if (!m) return;
+        const v = clean(r[ci]);
+        if (m.base){ if (m.base !== "skip") st[m.base === "hoten" ? "rawName" : m.base] = v; return; }
+        const d = st.subj[m.subj] || (st.subj[m.subj] = {});
+        d[m.field] = (BASE_CRIT.includes(m.field) && /^[thk]$/i.test(v)) ? v.toUpperCase() : v;
+      });
+      if (!st.rawName) continue;
+      idx++;
+      st.stt = st.stt || String(idx);
+      st.lop = (st.lop || name).toUpperCase();
+      st.name = toTitle(st.rawName.replace(/\s+/g, " "));
+      st.id = name + "#" + idx;
+      Object.keys(st.subj).forEach(k => { if (hasData(st.subj[k])) info.subjects.add(k); });
+      students.push(st);
+      info.count++;
+    }
+  }
+}
+function hasData(d){
+  if (!d) return false;
+  return Object.entries(d).some(([k, v]) => k !== "noidung" && v);
+}
+function subjectsOf(st){
+  return cfg.subjects.filter(s => s.on && hasData(st.subj[s.id]));
+}
+
+/* ================= KIỂM TRA DỮ LIỆU ================= */
+function warningsOf(st){
+  const w = [], subs = subjectsOf(st);
+  if (!subs.length) w.push("không có môn nào được chọn có dữ liệu");
+  for (const s of subs){
+    const d = st.subj[s.id];
+    for (const k of BASE_CRIT){
+      const c = cfg.criteria.find(c => c.key === k);
+      if (!c || !c.on) continue;
+      if (d[k] && !/^[THK]$/.test(d[k])) w.push(`${s.tenFile}: “${c.label}” = “${d[k].slice(0, 30)}”`);
+    }
+    if (cfg.columns.nhanxet.on && !d.nhanxet) w.push(`${s.tenFile}: thiếu nhận xét`);
+  }
+  return w;
+}
+
+/* ================= TÊN FILE ================= */
+function ctxOf(st){
+  const p = PERIODS[cfg.period];
+  const subs = st ? subjectsOf(st) : cfg.subjects.filter(s => s.on);
+  return {
+    THOI_DIEM: p.text.toLocaleUpperCase("vi"), thoi_diem: p.text, ThoiDiem: p.code,
+    NAM_HOC: cfg.namHoc, NamHoc: cfg.namHoc,
+    MON: subs.map(s => s.ten).join(", "),
+    Mon: subs.filter(s => s.inName).map(s => s.tenFile).join(cfg.monSep),
+    HoTen: st ? st.name : "", Lop: st ? st.lop : "", MaHS: st ? st.mahs : "", STT: st ? st.stt : ""
+  };
+}
+function safeName(s){
+  let f = s;
+  if (cfg.boDau) f = stripMarks(f);
+  f = f.replace(/[\\/:*?"<>|\r\n\t]+/g, " ").replace(/\s+/g, " ").replace(/^[ ._]+|[ ._]+$/g, "");
+  return f || "phieu";
+}
+function fileNameOf(st){ return safeName(fill(cfg.fileName, ctxOf(st))); }
+
+/* ================= DỰNG PDF ================= */
+const PAGE_W = 595.28, PAGE_H = 841.89, M = [42, 96, 42, 78];
+const CONTENT_W = PAGE_W - M[0] - M[2];
+
+function appendixBlocks(){
+  const out = [];
+  String(cfg.appendix || "").split("\n").forEach(line => {
+    const t = line.trimEnd();
+    if (!t.trim()){ out.push({ text:" ", fontSize:6 }); return; }
+    let m;
+    if ((m = t.match(/^##\s*(.*)$/))) out.push({ text:m[1], bold:true, margin:[0, 4, 0, 2] });
+    else if ((m = t.match(/^\s*(\d+)[.)]\s+(.*)$/))) out.push({ columns:[{ width:18, text:m[1] + "." }, { width:"*", text:m[2], bold:true }], margin:[16, 2, 0, 1], columnGap:4 });
+    else if ((m = t.match(/^\s*o\s+(.*)$/))) out.push({ columns:[{ width:14, text:"○", fontSize:8, margin:[0, 2, 0, 0] }, { width:"*", text:m[1] }], margin:[44, 1, 0, 1] });
+    else out.push({ text:t, margin:[0, 1, 0, 1] });
+  });
+  return out;
+}
+
+function subjectTable(st, s, n, ctx){
+  const d = st.subj[s.id] || {};
+  const C = cfg.columns;
+  const crits = C.tieuchi.on
+    ? cfg.criteria.filter(c => c.on).map(c => ({ label: fill(c.label, ctx), val: d[c.key] || "" })).filter(c => !(cfg.hideEmpty && !c.val))
+    : [];
+  const cols = [{ id:"stt", w:30 }, { id:"mon", w:58 }];
+  if (C.noidung.on) cols.push({ id:"noidung", w:118 });
+  if (C.tieuchi.on) cols.push({ id:"tc", w:122 }, { id:"tv", w:34 });
+  if (C.mucchung.on) cols.push({ id:"muc", w:62 });
+  if (C.nhanxet.on) cols.push({ id:"nx", w:136 });
+  const sum = cols.reduce((a, c) => a + c.w, 0);
+  const avail = CONTENT_W - cols.length * 8 - (cols.length + 1) * 0.6;   // trừ padding & đường kẻ
+  const widths = cols.map(c => +(c.w * avail / sum).toFixed(2));
+
+  const H = (t, extra) => Object.assign({ text:t, bold:true, alignment:"center", fillColor: cfg.headerFill ? "#FBE3D3" : undefined, verticalAlignment:"middle", margin:[0, 3, 0, 3] }, extra || {});
+  const head = [];
+  for (const c of cols){
+    if (c.id === "stt") head.push(H("STT"));
+    else if (c.id === "mon") head.push(H("Môn"));
+    else if (c.id === "noidung") head.push(H(C.noidung.label));
+    else if (c.id === "tc") head.push(H(C.tieuchi.label, { colSpan:2 }));
+    else if (c.id === "tv") head.push({});
+    else if (c.id === "muc") head.push(H(C.mucchung.label));
+    else if (c.id === "nx") head.push(H(C.nhanxet.label));
+  }
+  const rows = Math.max(1, crits.length);
+  const body = [head];
+  for (let i = 0; i < rows; i++){
+    const r = [];
+    for (const c of cols){
+      const span = i === 0 ? { rowSpan: rows, verticalAlignment:"middle" } : null;
+      if (c.id === "stt") r.push(span ? Object.assign({ text:String(n), alignment:"center" }, span) : {});
+      else if (c.id === "mon") r.push(span ? Object.assign({ text:s.ten, alignment:"center" }, span) : {});
+      else if (c.id === "noidung") r.push(span ? Object.assign({ text:d.noidung || "", alignment:"left" }, span) : {});
+      else if (c.id === "tc") r.push({ text: crits[i] ? crits[i].label : "", verticalAlignment:"middle" });
+      else if (c.id === "tv") r.push({ text: crits[i] ? crits[i].val : "", alignment:"center", verticalAlignment:"middle" });
+      else if (c.id === "muc") r.push(span ? Object.assign({ text:d.mucchung || "", alignment:"center" }, span) : {});
+      else if (c.id === "nx") r.push(span ? Object.assign({ text:d.nhanxet || "", alignment:"left" }, span) : {});
+    }
+    body.push(r);
+  }
+  return {
+    table:{ headerRows:1, widths, body, dontBreakRows:false },
+    layout:{
+      hLineWidth:() => 0.6, vLineWidth:() => 0.6, hLineColor:() => "#000", vLineColor:() => "#000",
+      paddingLeft:() => 4, paddingRight:() => 4, paddingTop:() => 3, paddingBottom:() => 3
+    },
+    fontSize: 12, lineHeight: 1.2
+  };
+}
+
+function studentContent(st, first){
+  const ctx = ctxOf(st);
+  const subs = subjectsOf(st);
+  const out = [];
+  const titleLines = fill(cfg.tieuDe, ctx).split("\n").filter(Boolean);
+  out.push({ stack: titleLines.map(t => ({ text:t, bold:true, fontSize:18, alignment:"center" })), margin:[0, 0, 0, 10], pageBreak: first ? undefined : "before" });
+  if (cfg.kinhGui) out.push({ text: fill(cfg.kinhGui, ctx), bold:true, italics:true, margin:[30, 0, 0, 4], fontSize:13 });
+  if (cfg.loiGui) out.push({ text: fill(cfg.loiGui, ctx), alignment:"justify", fontSize:13, lineHeight:1.35, margin:[0, 0, 0, 6] });
+  out.push({ columns:[
+      { width:"*", text:[{ text:"Họ tên học sinh: ", bold:true }, { text:st.name, bold:true }] },
+      { width:150, text:[{ text:"Lớp: ", bold:true }, { text:st.lop, bold:true }] }
+    ], fontSize:13, margin:[0, 2, 0, 8] });
+  subs.forEach((s, i) => {
+    const t = subjectTable(st, s, i + 1, ctx);
+    if (i > 0) { if (cfg.newPagePerSubject) t.pageBreak = "before"; else t.margin = [0, 10, 0, 0]; }
+    out.push(t);
+  });
+  // Phụ lục + chữ ký giữ liền một khối: không đủ chỗ thì sang trang mới
+  const tail = [];
+  if (cfg.appendixOn) tail.push({ stack: appendixBlocks(), fontSize:12, lineHeight:1.15 });
+  if (cfg.kyTen) tail.push({ columns:[{ width:"*", text:"" }, { width:"auto", stack: fill(cfg.kyTen, ctx).split("\n").map(t => ({ text:t, bold:true, italics:true, alignment:"center" })) }],
+      margin:[0, 8, 20, 0], fontSize:12.5 });
+  if (tail.length) out.push({ stack: tail, unbreakable:true, margin:[0, 14, 0, 0], pageBreak: cfg.appendixOn && cfg.appendixNewPage ? "before" : undefined });
+  return out;
+}
+
+function buildDoc(list){
+  return {
+    pageSize:"A4", pageMargins:M,
+    info:{ title: list.length === 1 ? fileNameOf(list[0]) : "Phiếu nhận xét", creator:"Xuất Phiếu Nhận Xét" },
+    background: () => [
+      { image:"header", width:PAGE_W, height:56, absolutePosition:{ x:0, y:0 } },
+      { image:"logo", width:44, absolutePosition:{ x:PAGE_W - 42 - 44, y:60 } },
+      { image:"footer", width:PAGE_W, height:66, absolutePosition:{ x:0, y:PAGE_H - 66 } }
+    ],
+    images: ASSETS.img,
+    defaultStyle:{ font:"Times", fontSize:12, lineHeight:1.15 },
+    content: list.flatMap((st, i) => studentContent(st, i === 0))
+  };
+}
+function pdfBuffer(dd){ return pdfMake.createPdf(dd).getBuffer(); }
+function pdfBlob(dd){ return pdfMake.createPdf(dd).getBlob(); }
+
+/* ================= HỌC SINH VÍ DỤ ================= */
+const EXAMPLE = {
+  id:"example", sheet:"Ví dụ", stt:"1", lop:"4A1", mahs:"", rawName:"Nguyễn Minh Khang", name:"Nguyễn Minh Khang (ví dụ)",
+  subj:{
+    STEM:{ noidung:"Trong nửa đầu học kỳ I, các con đã tìm hiểu chủ đề \"Nước và không khí\":\n+ Tính chất của nước, vòng tuần hoàn của nước.\n+ Không khí và sự chuyển động của không khí.\n+ Dự án: Thiết kế bình lọc nước mini.",
+      tinhthan:"T", tiepthu:"T", hoptac:"H", sangtao:"T", ketqua:"T", mucchung:"Hoàn thành tốt", diem:"",
+      nhanxet:"Con hào hứng tham gia các hoạt động thực hành và đưa ra nhiều ý tưởng cho sản phẩm. Con cần chủ động chia sẻ công việc với các bạn trong nhóm hơn nhé!" },
+    TIN:{ noidung:"Học sinh làm quen với phần mềm soạn thảo văn bản: gõ chữ, định dạng phông chữ, chèn hình ảnh. Sản phẩm ứng dụng: thiệp chúc mừng ngày Nhà giáo Việt Nam 20/11.",
+      tinhthan:"T", tiepthu:"T", hoptac:"T", sangtao:"T", ketqua:"T", mucchung:"Hoàn thành tốt", diem:"9",
+      nhanxet:"Con nắm vững thao tác định dạng văn bản và hoàn thành sản phẩm đẹp, đúng yêu cầu. Cô mong con tiếp tục phát huy!" }
+  }
+};
+
+/* ================= GIAO DIỆN: CÀI ĐẶT ================= */
+function save(){ store.set("pnx-cfg-v1", cfg); }
+
+function bindScalars(){
+  document.querySelectorAll("[data-bind]").forEach(el => {
+    const k = el.dataset.bind;
+    if (el.type === "checkbox") el.checked = !!cfg[k]; else el.value = cfg[k] ?? "";
+  });
+}
+document.querySelectorAll("[data-bind]").forEach(el => {
+  el.addEventListener(el.type === "checkbox" || el.tagName === "SELECT" ? "change" : "input", () => {
+    const k = el.dataset.bind;
+    cfg[k] = el.type === "checkbox" ? el.checked : el.value;
+    if (k === "titleCaseNames") { parseAll(); }
+    changed();
+  });
+});
+
+function renderPeriods(){
+  $("#periodSeg").innerHTML = Object.keys(PERIODS).map(k =>
+    `<label><input type="radio" name="period" value="${k}" ${cfg.period === k ? "checked" : ""}>${k}</label>`).join("");
+}
+$("#periodSeg").addEventListener("change", e => { cfg.period = e.target.value; changed(); });
+
+function renderSubjects(){
+  $("#subjList").innerHTML = cfg.subjects.map((s, i) => `
+    <div class="item subj ${s.on ? "" : "off"}">
+      <input type="checkbox" id="s_on_${i}" data-i="${i}" data-k="on" ${s.on ? "checked" : ""} aria-label="Đưa môn vào phiếu">
+      <label class="f">Tên in trên phiếu<input type="text" id="s_ten_${i}" data-i="${i}" data-k="ten" value="${esc(s.ten)}"></label>
+      <label class="f">Tên trong tên file<input type="text" id="s_fn_${i}" data-i="${i}" data-k="tenFile" value="${esc(s.tenFile)}"></label>
+      <label class="f sfx">Hậu tố cột Excel (cách nhau dấu phẩy)<input type="text" id="s_sfx_${i}" data-i="${i}" data-k="suffix" value="${esc(s.suffix)}"></label>
+      <div class="row fn"><label class="chk"><input type="checkbox" id="s_in_${i}" data-i="${i}" data-k="inName" ${s.inName ? "checked" : ""}> Ghi vào tên file</label>
+        <span class="grow"></span>${s.custom ? `<button type="button" class="sm" data-del="${i}">Xoá môn</button>` : ""}</div>
+    </div>`).join("");
+}
+$("#subjList").addEventListener("input", e => {
+  const el = e.target, i = el.dataset.i, k = el.dataset.k;
+  if (i == null) return;
+  cfg.subjects[i][k] = el.type === "checkbox" ? el.checked : el.value;
+  if (k === "on") el.closest(".item").classList.toggle("off", !el.checked);
+  if (k === "suffix") parseAll();
+  changed();
+});
+$("#subjList").addEventListener("click", e => {
+  const i = e.target.dataset.del;
+  if (i == null) return;
+  cfg.subjects.splice(+i, 1); renderSubjects(); parseAll(); changed();
+});
+$("#addSubj").addEventListener("click", () => {
+  cfg.subjects.push({ id:"M" + Date.now().toString(36), on:true, inName:true, ten:"Môn mới", tenFile:"Môn mới", suffix:"", custom:true });
+  renderSubjects(); changed();
+});
+
+function renderColumns(){
+  const C = cfg.columns;
+  $("#colList").innerHTML = Object.keys(C).map(k => `
+    <input type="checkbox" id="c_on_${k}" data-c="${k}" data-k="on" ${C[k].on ? "checked" : ""} aria-label="Hiện cột">
+    <input type="text" id="c_lb_${k}" data-c="${k}" data-k="label" value="${esc(C[k].label)}" title="Tên cột trên phiếu">`).join("");
+}
+$("#colList").addEventListener("input", e => {
+  const el = e.target, k = el.dataset.c;
+  if (!k) return;
+  cfg.columns[k][el.dataset.k] = el.type === "checkbox" ? el.checked : el.value;
+  changed();
+});
+
+function renderCriteria(){
+  $("#critList").innerHTML = cfg.criteria.map((c, i) => `
+    <div class="item crit ${c.on ? "" : "off"}">
+      <input type="checkbox" id="k_on_${i}" data-i="${i}" data-k="on" ${c.on ? "checked" : ""} aria-label="Hiện tiêu chí">
+      <div style="min-width:0"><input type="text" id="k_lb_${i}" data-i="${i}" data-k="label" value="${esc(c.label)}">
+        ${c.custom ? `<div class="tiny">Cột Excel: ${esc(c.excel)} + hậu tố môn</div>` : ""}</div>
+      <div class="row" style="gap:3px;flex-wrap:nowrap">
+        <button type="button" class="icon" data-mv="${i}" data-d="-1" aria-label="Lên">↑</button>
+        <button type="button" class="icon" data-mv="${i}" data-d="1" aria-label="Xuống">↓</button>
+        ${c.custom ? `<button type="button" class="icon" data-rm="${i}" aria-label="Xoá">✕</button>` : ""}
+      </div>
+    </div>`).join("");
+}
+$("#critList").addEventListener("input", e => {
+  const el = e.target, i = el.dataset.i;
+  if (i == null) return;
+  cfg.criteria[i][el.dataset.k] = el.type === "checkbox" ? el.checked : el.value;
+  if (el.type === "checkbox") el.closest(".item").classList.toggle("off", !el.checked);
+  changed();
+});
+$("#critList").addEventListener("click", e => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.mv != null){
+    const i = +b.dataset.mv, j = i + +b.dataset.d;
+    if (j < 0 || j >= cfg.criteria.length) return;
+    [cfg.criteria[i], cfg.criteria[j]] = [cfg.criteria[j], cfg.criteria[i]];
+  } else if (b.dataset.rm != null){
+    cfg.criteria.splice(+b.dataset.rm, 1); parseAll();
+  }
+  renderCriteria(); changed();
+});
+$("#addCrit").addEventListener("click", () => {
+  const label = $("#newCritLabel").value.trim(), excel = $("#newCritCol").value.trim() || label;
+  if (!label) { $("#newCritLabel").focus(); return; }
+  cfg.criteria.push({ key:"x_" + norm(excel), on:true, label, excel, custom:true });
+  $("#newCritLabel").value = ""; $("#newCritCol").value = "";
+  renderCriteria(); parseAll(); changed();
+});
+
+const TOKENS = ["{HoTen}","{Lop}","{MaHS}","{STT}","{ThoiDiem}","{Mon}","{NamHoc}"];
+$("#tokens").innerHTML = TOKENS.map(t => `<button type="button" data-t="${t}">${t}</button>`).join("");
+$("#tokens").addEventListener("click", e => {
+  const t = e.target.dataset.t; if (!t) return;
+  const el = $("#fileName"), p = el.selectionStart ?? el.value.length;
+  el.value = el.value.slice(0, p) + t + el.value.slice(el.selectionEnd ?? p);
+  cfg.fileName = el.value; el.focus(); changed();
+});
+
+function renderAllSettings(){ bindScalars(); renderPeriods(); renderSubjects(); renderColumns(); renderCriteria(); }
+
+/* ================= GIAO DIỆN: DỮ LIỆU ================= */
+function selectedStudents(){ return students.filter(s => selectedClasses.has(s.sheet)); }
+
+function renderData(){
+  const has = !!workbookRows;
+  $("#stats").hidden = !has; $("#classBox").hidden = !has;
+  if (!has){
+    $("#dataInfo").innerHTML = "Chưa có dữ liệu. Phần xem trước đang dùng <b>một học sinh ví dụ</b>.";
+    $("#warnBox").hidden = true; renderStudents(); return;
+  }
+  const sel = selectedStudents();
+  const warnList = [];
+  sel.forEach(st => warningsOf(st).forEach(w => warnList.push(`${st.lop} · ${st.name}: ${w}`)));
+  // trùng tên file trong cùng thư mục
+  const seen = new Map();
+  sel.forEach(st => { const k = (cfg.zipByClass ? st.lop + "/" : "") + fileNameOf(st).toLowerCase(); seen.set(k, (seen.get(k) || 0) + 1); });
+  const dup = [...seen].filter(([, n]) => n > 1).length;
+  if (dup) warnList.unshift(`${dup} tên file bị trùng — app sẽ tự thêm _2, _3…`);
+
+  const subjNames = new Set(); sheetsInfo.forEach(i => i.subjects.forEach(s => subjNames.add(s)));
+  $("#dataInfo").innerHTML = `Đã mở <b>${esc(sourceName)}</b>.`;
+  $("#stats").innerHTML = `
+    <div><b>${sheetsInfo.filter(i => i.count).length}</b><span>lớp</span></div>
+    <div><b>${students.length}</b><span>học sinh</span></div>
+    <div><b>${sel.length}</b><span>sẽ xuất</span></div>
+    <div><b>${[...subjNames].map(id => (cfg.subjects.find(s => s.id === id) || {}).tenFile || id).join(", ") || "—"}</b><span>môn tìm thấy</span></div>`;
+  $("#classChips").innerHTML = sheetsInfo.map((i, n) => {
+    const subs = [...i.subjects].map(id => (cfg.subjects.find(s => s.id === id) || {}).tenFile || id).join(" + ");
+    const tip = i.error ? i.error : `${i.count} HS · ${subs || "không có môn"}${i.unknown.length ? " · cột không nhận ra: " + i.unknown.join(", ") : ""}`;
+    return `<label class="chip" title="${esc(tip)}"><input type="checkbox" id="cls_${n}" data-sheet="${esc(i.name)}" ${selectedClasses.has(i.name) ? "checked" : ""} ${i.count ? "" : "disabled"}>
+      ${esc(i.name)} <span class="n">${i.count}</span>${i.error || i.unknown.length ? '<span class="w">!</span>' : ""}</label>`;
+  }).join("");
+  const sheetWarn = sheetsInfo.filter(i => i.error || i.unknown.length)
+    .map(i => `Sheet ${i.name}: ${i.error || "cột không nhận ra: " + i.unknown.join(", ")}`);
+  const all = sheetWarn.concat(warnList);
+  $("#warnBox").hidden = !all.length;
+  $("#warnBox").innerHTML = all.length ? `<b>${all.length} điểm cần kiểm tra</b> (vẫn xuất được):<ul>${all.slice(0, 200).map(w => `<li>${esc(w)}</li>`).join("")}</ul>${all.length > 200 ? "…" : ""}` : "";
+  renderStudents();
+}
+$("#classChips").addEventListener("change", e => {
+  const sh = e.target.dataset.sheet; if (!sh) return;
+  e.target.checked ? selectedClasses.add(sh) : selectedClasses.delete(sh);
+  renderData(); updateExportBtn();
+});
+$("#selAll").addEventListener("click", () => { sheetsInfo.forEach(i => i.count && selectedClasses.add(i.name)); renderData(); updateExportBtn(); });
+$("#selNone").addEventListener("click", () => { selectedClasses.clear(); renderData(); updateExportBtn(); });
+$("#search").addEventListener("input", renderStudents);
+
+function renderStudents(){
+  const q = norm($("#search").value);
+  const list = workbookRows ? selectedStudents() : [EXAMPLE];
+  const shown = list.filter(s => !q || norm(s.name).includes(q)).slice(0, 400);
+  $("#stBody").innerHTML = shown.map(st => {
+    const w = workbookRows ? warningsOf(st) : [];
+    return `<tr data-id="${esc(st.id)}" class="${current && current.id === st.id ? "sel" : ""}">
+      <td>${esc(st.lop)}</td>
+      <td>${esc(st.name)}${w.length ? ` <span class="pill warn" title="${esc(w.join("\n"))}">${w.length} lưu ý</span>` : ""}</td>
+      <td>${subjectsOf(st).map(s => `<span class="pill">${esc(s.tenFile)}</span>`).join("") || "—"}</td>
+      <td class="fname">${esc(fileNameOf(st))}.pdf</td></tr>`;
+  }).join("") || `<tr><td colspan="4" class="tiny">Không có học sinh nào. Hãy chọn lớp ở trên.</td></tr>`;
+}
+$("#stBody").addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-id]"); if (!tr) return;
+  current = tr.dataset.id === "example" ? EXAMPLE : students.find(s => s.id === tr.dataset.id);
+  document.querySelectorAll("#stBody tr").forEach(r => r.classList.toggle("sel", r === tr));
+  renderPreview();
+});
+
+/* ================= XEM TRƯỚC ================= */
+let pvTimer = null, pvUrl = null, pvSeq = 0;
+function renderPreview(){
+  clearTimeout(pvTimer);
+  pvTimer = setTimeout(async () => {
+    const st = current || EXAMPLE;
+    const seq = ++pvSeq;
+    try {
+      const blob = await pdfBlob(buildDoc([st]));
+      if (seq !== pvSeq) return;
+      if (pvUrl) URL.revokeObjectURL(pvUrl);
+      pvUrl = URL.createObjectURL(blob);
+      $("#preview").src = pvUrl + "#toolbar=1&view=FitH";
+    } catch (err) { console.error(err); $("#expMsg").textContent = "Lỗi xem trước: " + err.message; $("#expMsg").className = "msg bad"; }
+  }, 350);
+}
+$("#dlOne").addEventListener("click", async () => {
+  const st = current || EXAMPLE;
+  download(await pdfBlob(buildDoc([st])), fileNameOf(st) + ".pdf");
+});
+
+/* ================= XUẤT ================= */
+function updateExportBtn(){
+  const n = workbookRows ? selectedStudents().length : 0;
+  $("#btnExport").disabled = !n;
+  $("#btnExport").textContent = n ? `Xuất ${n} phiếu (ZIP)` : "Xuất PDF (cần tải Excel)";
+}
+let exporting = false;
+$("#btnExport").addEventListener("click", async () => {
+  if (exporting) return;
+  const list = selectedStudents().filter(st => subjectsOf(st).length);
+  if (!list.length) return;
+  exporting = true; $("#btnExport").disabled = true;
+  const msg = $("#expMsg"), prog = $("#prog");
+  msg.className = "msg"; prog.style.width = "0%";
+  try {
+    const zip = new JSZip(), used = new Set();
+    const uniq = path => { let p = path, i = 2; while (used.has(p.toLowerCase())) p = path.replace(/\.pdf$/, `_${i++}.pdf`); used.add(p.toLowerCase()); return p; };
+    const mode = cfg.outMode;
+    const byClass = new Map();
+    list.forEach(st => { if (!byClass.has(st.lop)) byClass.set(st.lop, []); byClass.get(st.lop).push(st); });
+    const total = (mode !== "class" ? list.length : 0) + (mode !== "each" ? byClass.size : 0);
+    let done = 0;
+    const step = () => { done++; prog.style.width = (done / total * 90).toFixed(1) + "%"; msg.textContent = `Đang tạo ${done}/${total}…`; };
+    if (mode !== "class"){
+      for (const st of list){
+        const folder = cfg.zipByClass ? safeName(st.lop) + "/" : "";
+        zip.file(uniq(folder + fileNameOf(st) + ".pdf"), await pdfBuffer(buildDoc([st])));
+        step(); if (done % 3 === 0) await tick();
+      }
+    }
+    if (mode !== "each"){
+      const c = ctxOf(null);
+      for (const [lop, arr] of byClass){
+        const folder = cfg.zipByClass ? safeName(lop) + "/" : "";
+        zip.file(uniq(folder + safeName(`${lop}_${c.ThoiDiem}_Tổng hợp cả lớp`) + ".pdf"), await pdfBuffer(buildDoc(arr)));
+        step(); await tick();
+      }
+    }
+    msg.textContent = "Đang nén ZIP…";
+    const blob = await zip.generateAsync({ type:"blob" }, m => { prog.style.width = (90 + m.percent / 10).toFixed(1) + "%"; });
+    const cls = [...byClass.keys()];
+    download(blob, safeName(`PhieuNhanXet_${PERIODS[cfg.period].code}_${cls.length === 1 ? cls[0] : cls.length + " lop"}`) + ".zip");
+    prog.style.width = "100%";
+    const skipped = selectedStudents().length - list.length;
+    msg.className = "msg ok";
+    msg.textContent = `Xong: ${list.length} học sinh${skipped ? `, bỏ qua ${skipped} học sinh không có dữ liệu` : ""}.`;
+  } catch (err) {
+    console.error(err); msg.className = "msg bad"; msg.textContent = "Lỗi khi xuất: " + err.message;
+  } finally { exporting = false; updateExportBtn(); }
+});
+
+/* ================= MỞ FILE EXCEL ================= */
+async function openExcel(file){
+  $("#dataInfo").className = "msg"; $("#dataInfo").textContent = "Đang đọc " + file.name + "…";
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type:"array" });
+    workbookRows = wb.SheetNames.map(name => ({ name, rows: XLSX.utils.sheet_to_json(wb.Sheets[name], { header:1, raw:true, defval:null, blankrows:false }) }));
+    sourceName = file.name;
+    parseAll();
+    selectedClasses = new Set(sheetsInfo.filter(i => i.count).map(i => i.name));
+    current = students[0] || null;
+    renderData(); updateExportBtn(); renderPreview();
+  } catch (err) {
+    console.error(err); $("#dataInfo").className = "msg bad";
+    $("#dataInfo").textContent = "Không đọc được file này. Hãy chọn file Excel .xlsx (" + err.message + ")";
+  }
+}
+$("#xlsFile").addEventListener("change", e => { const f = e.target.files[0]; if (f) openExcel(f); e.target.value = ""; });
+const drop = $("#drop");
+["dragenter","dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) openExcel(f); });
+
+/* ================= MẪU: LƯU / MỞ / MẶC ĐỊNH ================= */
+$("#btnSaveTpl").addEventListener("click", () =>
+  download(new Blob([JSON.stringify(cfg, null, 2)], { type:"application/json" }), safeName("Mau_phieu_" + PERIODS[cfg.period].code) + ".json"));
+$("#btnLoadTpl").addEventListener("click", () => $("#tplFile").click());
+$("#tplFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  try { cfg = mergeCfg(JSON.parse(await f.text())); renderAllSettings(); parseAll(); changed(); }
+  catch (err) { $("#expMsg").className = "msg bad"; $("#expMsg").textContent = "File mẫu không hợp lệ: " + err.message; }
+});
+let resetArmed = false;
+$("#btnReset").addEventListener("click", e => {
+  if (!resetArmed){ resetArmed = true; e.target.textContent = "Bấm lần nữa để khôi phục"; setTimeout(() => { resetArmed = false; e.target.textContent = "Mặc định"; }, 3000); return; }
+  resetArmed = false; e.target.textContent = "Mặc định";
+  cfg = defaultCfg(); renderAllSettings(); parseAll(); changed();
+});
+
+/* ================= KHỞI ĐỘNG ================= */
+function changed(){
+  save();
+  $("#fnExample").textContent = fileNameOf(current || EXAMPLE) + ".pdf";
+  renderData(); updateExportBtn(); renderPreview();
+}
+pdfMake.addVirtualFileSystem(ASSETS.fonts);
+pdfMake.addFonts({ Times:{ normal:"LS-Regular.ttf", bold:"LS-Bold.ttf", italics:"LS-Italic.ttf", bolditalics:"LS-BoldItalic.ttf" } });
+renderAllSettings();
+changed();
+</script>
+</body>
+</html>
